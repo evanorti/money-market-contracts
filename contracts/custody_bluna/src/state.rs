@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_bignumber::Uint256;
+use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{CanonicalAddr, Deps, Order, StdResult, Storage, Uint128};
 use cosmwasm_storage::{Bucket, ReadonlyBucket, ReadonlySingleton, Singleton};
 use moneymarket::custody::{BAssetInfo, BorrowerResponse};
@@ -105,4 +105,50 @@ fn calc_range_start(start_after: Option<CanonicalAddr>) -> Option<Vec<u8>> {
         v.push(1);
         v
     })
+}
+
+// rewards / collateral
+const KEY_GLOBAL_INDEX: &[u8] = b"global_index";
+const PREFIX_USER_REWARDS: &[u8] = b"user_reward";
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
+pub struct UserRewards {
+    // whenever the user_index < global_index
+    // i can set user_index == global_index, and accumulate the rewards
+
+    // 100 units of collateral
+    // user_index == 1
+    // global_index == 2
+
+    // rewards += (global_index - user_index) * n_collateral_units
+    // user_index = global_index
+    pub user_index: Decimal256,
+    pub rewards: Uint256,
+}
+
+pub fn save_global_index(storage: &mut dyn Storage, data: &Decimal256) -> StdResult<()> {
+    Singleton::new(storage, KEY_GLOBAL_INDEX).save(data)
+}
+
+pub fn read_global_index(storage: &dyn Storage) -> Decimal256 {
+    ReadonlySingleton::new(storage, KEY_GLOBAL_INDEX)
+        .load()
+        .unwrap_or(Decimal256::zero())
+}
+
+pub fn read_user_rewards(storage: &dyn Storage, borrower: &CanonicalAddr) -> UserRewards {
+    let user_index_bucket: ReadonlyBucket<UserRewards> =
+        ReadonlyBucket::new(storage, PREFIX_USER_REWARDS);
+    user_index_bucket
+        .load(borrower.as_slice())
+        .unwrap_or(UserRewards::default())
+}
+
+pub fn save_user_rewards(
+    storage: &mut dyn Storage,
+    borrower: &CanonicalAddr,
+    new_rewards: &UserRewards,
+) -> StdResult<()> {
+    let mut user_index_bucket: Bucket<UserRewards> = Bucket::new(storage, PREFIX_USER_REWARDS);
+    user_index_bucket.save(borrower.as_slice(), new_rewards)
 }

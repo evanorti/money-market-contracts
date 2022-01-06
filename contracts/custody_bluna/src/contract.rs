@@ -7,7 +7,7 @@ use cosmwasm_std::{
 
 use crate::collateral::{
     deposit_collateral, liquidate_collateral, lock_collateral, query_borrower, query_borrowers,
-    unlock_collateral, withdraw_collateral,
+    unlock_collateral, withdraw_collateral, withdraw_staking_rewards,
 };
 use crate::distribution::{distribute_hook, distribute_rewards, swap_to_stable_denom};
 use crate::error::ContractError;
@@ -75,6 +75,8 @@ pub fn execute(
         }
         ExecuteMsg::DistributeRewards {} => distribute_rewards(deps, env, info),
         ExecuteMsg::WithdrawCollateral { amount } => withdraw_collateral(deps, info, amount),
+        ExecuteMsg::WithdrawStakingRewards {} => withdraw_staking_rewards(deps, info),
+
         ExecuteMsg::LiquidateCollateral {
             liquidator,
             borrower,

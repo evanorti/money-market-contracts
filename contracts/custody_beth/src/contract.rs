@@ -84,6 +84,7 @@ pub fn execute(
             let borrower_addr = deps.api.addr_validate(&borrower)?;
             liquidate_collateral(deps, info, liquidator_addr, borrower_addr, amount)
         }
+        ExecuteMsg::WithdrawStakingRewards {} => Err(ContractError::Unauthorized {}),
     }
 }
 
